@@ -217,18 +217,46 @@ input:checked + .slider:before {
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
   justify-content: center;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 15px;
 }
 
 .modal-actions button {
-  flex: 1 1 calc(50% - 20px); /* Ensure each button takes about half the width with proper spacing */
-  margin: 5px;
-  padding: 10px;
-  min-width: 120px; /* You can adjust this value for button width */
-  max-width: 180px;
-  box-sizing: border-box;
+  padding: 15px 20px;  /* Increase padding for better touch area */
+  font-size: 1.1em;  /* Increase font size slightly for readability */
+  min-width: 100px;  /* Set a minimum width to make buttons more consistent */
+  height: 50px;  /* Set height for better touch target */
+  border: none;
+  border-radius: 8px;  /* Rounded corners */
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.1s;  /* Smooth transition on hover/click */
+}
+
+.modal-actions button:hover {
+  background-color: #0056b3;  /* Darker blue on hover */
+}
+
+.modal-actions button:active {
+  transform: scale(0.98);  /* Slight "press" effect when clicked */
+}
+
+.modal-actions button.cancel {
+  background-color: #6c757d;  /* Grey color for cancel buttons */
+}
+
+.modal-actions button.cancel:hover {
+  background-color: #5a6268;  /* Darker grey on hover */
+}
+
+.modal-actions button.close-button {
+  background-color: #6c757d;  /* Grey color for close buttons */
+}
+
+.modal-actions button.close-button:hover {
+  background-color: #5a6268;  /* Darker grey on hover */
 }
 
 button {
