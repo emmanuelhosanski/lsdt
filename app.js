@@ -1,7 +1,6 @@
 // app.js
 const BASE_URL = 'https://lsdt-api-production.lasalledutemps.com';
-const AUTH_TOKEN =
-  'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJsc2R0X2FwcCIsInJvbGUiOiJ1c2VyIiwidXNlcl9pZCI6MzQ5NCwiaWF0IjoxNzMyNDUxMzM5fQ.pykIR3g6UJALDv0zTeQMm81xrFe_8FuEosrTvLBQ1bI'; // Replace with your token
+const AUTH_TOKEN = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJsc2R0X2FwcCIsInJvbGUiOiJ1c2VyIiwidXNlcl9pZCI6MzQ5NCwiaWF0IjoxNzMyNDUxMzM5fQ.pykIR3g6UJALDv0zTeQMm81xrFe_8FuEosrTvLBQ1bI'; // Replace with your token
 const USER_ID = 3494;
 const GYM_ID = 1;
 const ACTIVITY = 'FULL-BODY';
@@ -26,7 +25,7 @@ function openModal(content, actions) {
   modalActions.className = 'modal-actions';
 
   modalActions.innerHTML = ''; // Clear existing actions
-  actions.forEach((action) => {
+  actions.forEach(action => {
     const button = document.createElement('button');
     button.innerText = action.label;
     button.onclick = action.onClick;
@@ -48,15 +47,12 @@ document.getElementById('modal').onclick = function (event) {
 // Fetch appointments
 async function fetchAppointments() {
   try {
-    const response = await fetch(
-      `${BASE_URL}/appointments/users/${USER_ID}/app`,
-      {
-        headers: {
-          Authorization: AUTH_TOKEN,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const response = await fetch(`${BASE_URL}/appointments/users/${USER_ID}/app`, {
+      headers: {
+        Authorization: AUTH_TOKEN,
+        'Content-Type': 'application/json',
+      },
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -67,6 +63,86 @@ async function fetchAppointments() {
     console.error('Error fetching appointments:', error);
     return { next_appointments: [], past_appointments: [] };
   }
+}
+
+// Function to parse appointment date string (e.g., "lun. 25 nov.")
+function parseAppointmentDate(dateString) {
+  const [dayName, day, monthName] = dateString.split(' ');
+
+  console.log(`Parsing appointment date: ${dateString}`); // Debugging
+
+  const dayNumber = parseInt(day);
+  const monthMap = {
+    'janv.': 0,
+    'févr.': 1,
+    'mars': 2,
+    'avr.': 3,
+    'mai': 4,
+    'juin': 5,
+    'juil.': 6,
+    'août': 7,
+    'sept.': 8,
+    'oct.': 9,
+    'nov.': 10,
+    'déc.': 11,
+  };
+  const month = monthMap[monthName];
+
+  if (isNaN(dayNumber) || month === undefined) {
+    console.error(`Failed to parse date: ${dateString}`); // Debugging
+    return null;
+  }
+
+  const currentYear = new Date().getFullYear();
+  return new Date(currentYear, month, dayNumber);
+}
+
+// Display the next appointment at the top of the page
+function displayNextAppointment(nextAppointments) {
+  const nextAppointmentText = document.getElementById('next-appointment-text');
+
+  if (nextAppointments.length > 0) {
+    // Sort appointments by date (convert to a Date object for comparison)
+    nextAppointments.sort((a, b) => {
+      const dateA = parseAppointmentDate(a.date);
+      const dateB = parseAppointmentDate(b.date);
+      return dateA - dateB;
+    });
+
+    const nextAppointment = nextAppointments[0];
+    const appointmentDate = parseAppointmentDate(nextAppointment.date);
+
+    if (appointmentDate) {
+      const today = new Date();
+      const dayDifference = Math.ceil((appointmentDate - today) / (1000 * 3600 * 24));
+
+      let whenText;
+      if (dayDifference === 1) {
+        whenText = 'tomorrow';
+      } else if (dayDifference === 2) {
+        whenText = 'after-tomorrow';
+      } else if (dayDifference > 2) {
+        whenText = formatDateToMatchAPI(appointmentDate);
+      } else {
+        whenText = 'today';
+      }
+
+      nextAppointmentText.innerText = `Your next appointment is ${whenText} at ${nextAppointment.hour}`;
+    } else {
+      nextAppointmentText.innerText = 'You have no upcoming appointments.';
+    }
+  } else {
+    nextAppointmentText.innerText = 'You have no upcoming appointments.';
+  }
+}
+
+// Format a date object to match the API's French date format (e.g., "lun. 2 déc.")
+function formatDateToMatchAPI(date) {
+  return date.toLocaleDateString('fr-FR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
 }
 
 // Check availability for a specific day
@@ -93,128 +169,6 @@ async function checkAvailability(date) {
   }
 }
 
-// Book a slot
-async function bookSlot(date, hour) {
-  try {
-    const response = await fetch(`${BASE_URL}/appointments/users/app`, {
-      method: 'POST',
-      headers: {
-        Authorization: AUTH_TOKEN,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        date,
-        hour,
-        user_id: USER_ID,
-        gym_id: GYM_ID,
-        activity: ACTIVITY,
-      }),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    console.log(`Booked slot on ${date} at ${hour}`);
-    addToGoogleCalendar(date, hour); // Add to Google Calendar after booking
-    return response.status === 204;
-  } catch (error) {
-    console.error(`Error booking slot on ${date} at ${hour}:`, error);
-    return false;
-  }
-}
-
-// Cancel an appointment
-async function cancelAppointment(appointmentId) {
-  try {
-    const response = await fetch(`${BASE_URL}/appointments/app`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: AUTH_TOKEN,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        appointment_id: appointmentId,
-        user_id: USER_ID,
-        subscription_type: 'year',
-      }),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    console.log(`Cancelled appointment with ID: ${appointmentId}`);
-    return response.status === 204;
-  } catch (error) {
-    console.error(
-      `Error cancelling appointment with ID ${appointmentId}:`,
-      error
-    );
-    return false;
-  }
-}
-
-// Format date to match API response (e.g., "lun. 2 déc.")
-function formatDateToMatchAPI(date) {
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
-}
-
-// Function to parse appointment date string (e.g., "lun. 25 nov.")
-function parseAppointmentDate(dateString) {
-  const [dayName, day, monthName] = dateString.split(' ');
-
-  console.log(`Parsing appointment date: ${dateString}`); // Debugging
-
-  const dayNumber = parseInt(day);
-  const month = new Date(Date.parse(`${monthName} 1`)).getMonth(); // Convert month name to month index
-
-  if (isNaN(dayNumber) || isNaN(month)) {
-    console.error(`Failed to parse date: ${dateString}`); // Debugging
-  }
-
-  const currentYear = new Date().getFullYear();
-  return new Date(currentYear, month, dayNumber);
-}
-
-// Display the next appointment at the top of the page
-function displayNextAppointment(nextAppointments) {
-  const nextAppointmentText = document.getElementById('next-appointment-text');
-
-  if (nextAppointments.length > 0) {
-    // Sort appointments by date (convert to a Date object for comparison)
-    nextAppointments.sort((a, b) => {
-      const dateA = parseAppointmentDate(a.date);
-      const dateB = parseAppointmentDate(b.date);
-      return dateA - dateB;
-    });
-
-    const nextAppointment = nextAppointments[0];
-    const appointmentDate = parseAppointmentDate(nextAppointment.date);
-
-    if (appointmentDate) {
-      const today = new Date();
-      const dayDifference = Math.ceil(
-        (appointmentDate - today) / (1000 * 3600 * 24)
-      );
-
-      let whenText;
-      if (dayDifference === 1) {
-        whenText = 'tomorrow';
-      } else if (dayDifference === 2) {
-        whenText = 'after-tomorrow';
-      } else {
-        whenText = formatDateToMatchAPI(appointmentDate);
-      }
-
-      nextAppointmentText.innerText = `💡 Your next appointment is ${whenText} at ${nextAppointment.hour}`;
-    } else {
-      nextAppointmentText.innerText = '💡 You have no upcoming appointments.';
-    }
-  } else {
-    nextAppointmentText.innerText = '💡 You have no upcoming appointments.';
-  }
-}
 
 // Render the calendar
 async function renderCalendar() {
@@ -268,26 +222,12 @@ async function renderCalendar() {
     }
 
     calendarContainer.appendChild(dayDiv);
-    setTimeout(
-      () =>
-        updateDayInfo(
-          dayDiv,
-          apiFormattedDate.toLowerCase(),
-          date,
-          appointments
-        ),
-      0
-    );
+    setTimeout(() => updateDayInfo(dayDiv, apiFormattedDate.toLowerCase(), date, appointments), 0);
   });
 }
 
 // Function to update day info based on appointments and availability
-async function updateDayInfo(
-  dayDiv,
-  apiFormattedDate,
-  dateObject,
-  appointments
-) {
+async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments) {
   const today = new Date();
 
   // Check past appointments
@@ -310,50 +250,49 @@ async function updateDayInfo(
     dayDiv.classList.remove('placeholder');
     dayDiv.classList.add('booked');
     dayDiv.onclick = async () => {
-      openModal(`You have a booked appointment on ${apiFormattedDate}.`, [
-        {
-          label: 'Cancel Appointment',
-          className: 'cancel',
-          onClick: async () => {
-            if (await cancelAppointment(nextAppointment.id)) {
-              renderCalendar();
-              document.getElementById('modal').style.display = 'none';
-            }
+      openModal(
+        `You have a booked appointment on ${apiFormattedDate}.`,
+        [
+          {
+            label: 'Cancel Appointment',
+            className: 'cancel',
+            onClick: async () => {
+              if (await cancelAppointment(nextAppointment.id)) {
+                renderCalendar();
+                document.getElementById('modal').style.display = 'none';
+              }
+            },
           },
-        },
-      ]);
+        ]
+      );
     };
     return;
   }
 
   // Check availability for future dates (only if date is today or in the future)
   if (dateObject >= today) {
-    const formattedDateForAvailability = `${String(
-      dateObject.getDate()
-    ).padStart(2, '0')}-${String(dateObject.getMonth() + 1).padStart(
-      2,
-      '0'
-    )}-${dateObject.getFullYear()}`;
-    const availableSlots = await checkAvailability(
-      formattedDateForAvailability
-    );
+    const formattedDateForAvailability = `${String(dateObject.getDate()).padStart(2, '0')}-${String(dateObject.getMonth() + 1).padStart(2, '0')}-${dateObject.getFullYear()}`;
+    const availableSlots = await checkAvailability(formattedDateForAvailability);
     dayDiv.classList.remove('placeholder');
 
     if (availableSlots.includes('08:00')) {
       dayDiv.classList.add('available');
       dayDiv.onclick = async () => {
-        openModal(`Do you want to book the 8:00 slot on ${apiFormattedDate}?`, [
-          {
-            label: 'Book Slot',
-            className: 'book',
-            onClick: async () => {
-              if (await bookSlot(formattedDateForAvailability, '08:00')) {
-                renderCalendar();
-                document.getElementById('modal').style.display = 'none';
-              }
+        openModal(
+          `Do you want to book the 8:00 slot on ${apiFormattedDate}?`,
+          [
+            {
+              label: 'Book Slot',
+              className: 'book',
+              onClick: async () => {
+                if (await bookSlot(formattedDateForAvailability, '08:00')) {
+                  renderCalendar();
+                  document.getElementById('modal').style.display = 'none';
+                }
+              },
             },
-          },
-        ]);
+          ]
+        );
       };
     } else {
       dayDiv.classList.add('unavailable');
