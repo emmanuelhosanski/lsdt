@@ -57,10 +57,8 @@ async function fetchAppointments() {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
     const data = await response.json();
-    console.log('Appointments API Response:', data);
     return data;
   } catch (error) {
-    console.error('Error fetching appointments:', error);
     return { next_appointments: [], past_appointments: [] };
   }
 }
@@ -69,7 +67,6 @@ async function fetchAppointments() {
 function parseAppointmentDate(dateString) {
   const [dayName, day, monthName] = dateString.split(' ');
 
-  console.log(`Parsing appointment date: ${dateString}`); // Debugging
 
   const dayNumber = parseInt(day);
   const monthMap = {
@@ -89,7 +86,6 @@ function parseAppointmentDate(dateString) {
   const month = monthMap[monthName];
 
   if (isNaN(dayNumber) || month === undefined) {
-    console.error(`Failed to parse date: ${dateString}`); // Debugging
     return null;
   }
 
@@ -161,10 +157,8 @@ async function checkAvailability(date) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
     const data = await response.json();
-    console.log(`Availability for ${date}:`, data);
     return data;
   } catch (error) {
-    console.error(`Error checking availability for ${date}:`, error);
     return [];
   }
 }
