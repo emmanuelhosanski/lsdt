@@ -245,7 +245,7 @@ input:checked + .slider:before {
 }
 
 .modal-actions button.cancel {
-  background-color: #6c757d;  /* Grey color for cancel buttons */
+  background-color: #ff4c4c;  /* Grey color for cancel buttons */
 }
 
 .modal-actions button.cancel:hover {
@@ -270,7 +270,7 @@ button {
 }
 
 button.book {
-  background-color: #4caf50;
+  background-color: #5FAD56;
   color: #ffffff;
 }
 
