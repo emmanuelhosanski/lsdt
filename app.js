@@ -127,9 +127,9 @@ function displayNextAppointment(nextAppointments) {
         whenText = 'today';
       }
 
-      nextAppointmentText.innerText = `Your next appointment is ${whenText} at ${nextAppointment.hour}`;
+      nextAppointmentText.innerHTML = `😁<br>Your next appointment is<br>${whenText} at ${nextAppointment.hour}`;
     } else {
-      nextAppointmentText.innerText = 'You have no upcoming appointments.';
+      nextAppointmentText.innerText = '😩<br>You have no upcoming appointments.';
     }
   } else {
     nextAppointmentText.innerText = 'You have no upcoming appointments.';
@@ -251,10 +251,10 @@ async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments)
     dayDiv.classList.add('booked');
     dayDiv.onclick = async () => {
       openModal(
-        `You have a booked appointment on ${apiFormattedDate}.`,
+        `You already have a booked appointment.`,
         [
           {
-            label: 'Cancel Appointment',
+            label: 'Cancel the appointment',
             className: 'cancel',
             onClick: async () => {
               if (await cancelAppointment(nextAppointment.id)) {
@@ -279,10 +279,10 @@ async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments)
       dayDiv.classList.add('available');
       dayDiv.onclick = async () => {
         openModal(
-          `Do you want to book the 8:00 slot on ${apiFormattedDate}?`,
+          `Do you want to book the slot?`,
           [
             {
-              label: 'Book Slot',
+              label: '08:00',
               className: 'book',
               onClick: async () => {
                 if (await bookSlot(formattedDateForAvailability, '08:00')) {
@@ -299,9 +299,9 @@ async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments)
       dayDiv.onclick = async () => {
         if (availableSlots.length > 0) {
           openModal(
-            `Available slots for ${apiFormattedDate}:`,
+            `Available slots :`,
             availableSlots.map((slot) => ({
-              label: `Book ${slot}`,
+              label: `${slot}`,
               className: 'book',
               onClick: async () => {
                 if (await bookSlot(formattedDateForAvailability, slot)) {
@@ -312,7 +312,7 @@ async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments)
             }))
           );
         } else {
-          openModal(`No slots available for ${apiFormattedDate}.`, [
+          openModal(`No slots available.`, [
             {
               label: 'Close',
               className: 'close-button',
