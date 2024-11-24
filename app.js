@@ -14,6 +14,7 @@ document.getElementById('toggle-past').addEventListener('change', () => {
 });
 
 // Open custom modal
+// Open custom modal
 function openModal(content, actions) {
   const modal = document.getElementById('modal');
   const modalBody = document.getElementById('modal-body');
@@ -28,14 +29,14 @@ function openModal(content, actions) {
   actions.forEach(action => {
     const button = document.createElement('button');
     button.innerText = action.label;
-    button.onclick = action.onClick;
-    button.ontouchend = action.onClick;
+    button.onclick = action.onClick; // Only use onclick
     button.className = action.className || ''; // Assign classes for styling buttons
     modalActions.appendChild(button);
   });
 
   modal.style.display = 'flex';
 }
+
 
 // Close modal when clicking outside the modal content
 document.getElementById('modal').onclick = function (event) {
@@ -63,10 +64,69 @@ async function fetchAppointments() {
   }
 }
 
+// Book a slot
+async function bookSlot(date, hour) {
+  try {
+    const response = await fetch(`${BASE_URL}/appointments/users/app`, {
+      method: 'POST',
+      headers: {
+        Authorization: AUTH_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        date,
+        hour,
+        user_id: USER_ID,
+        gym_id: GYM_ID,
+        activity: ACTIVITY,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    console.log(`Booked slot on ${date} at ${hour}`);
+    
+    // Add to Google Calendar after successfully booking the slot
+    addToGoogleCalendar(date, hour);
+    
+    return response.status === 204;
+  } catch (error) {
+    console.error(`Error booking slot on ${date} at ${hour}:`, error);
+    return false;
+  }
+}
+
+// Cancel an appointment
+async function cancelAppointment(appointmentId) {
+  try {
+    const response = await fetch(`${BASE_URL}/appointments/app`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: AUTH_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        appointment_id: appointmentId,
+        user_id: USER_ID,
+        subscription_type: 'year',
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    console.log(`Cancelled appointment with ID: ${appointmentId}`);
+    return response.status === 204;
+  } catch (error) {
+    console.error(`Error cancelling appointment with ID ${appointmentId}:`, error);
+    return false;
+  }
+}
+
+
+
 // Function to parse appointment date string (e.g., "lun. 25 nov.")
 function parseAppointmentDate(dateString) {
   const [dayName, day, monthName] = dateString.split(' ');
-
 
   const dayNumber = parseInt(day);
   const monthMap = {
@@ -114,21 +174,21 @@ function displayNextAppointment(nextAppointments) {
 
       let whenText;
       if (dayDifference === 1) {
-        whenText = 'tomorrow';
+        whenText = 'demain';
       } else if (dayDifference === 2) {
-        whenText = 'after-tomorrow';
+        whenText = 'après-demain';
       } else if (dayDifference > 2) {
         whenText = formatDateToMatchAPI(appointmentDate);
       } else {
-        whenText = 'today';
+        whenText = "aujourd'hui";
       }
 
-      nextAppointmentText.innerHTML = `😁<br>Your next appointment is<br>${whenText} at ${nextAppointment.hour}`;
+      nextAppointmentText.innerHTML = `😁<br>Le prochain cours est<br><strong>${whenText} à ${nextAppointment.hour}</strong>`;
     } else {
-      nextAppointmentText.innerText = '😩<br>You have no upcoming appointments.';
+      nextAppointmentText.innerText = '😩<br>Pas de cours prévu.';
     }
   } else {
-    nextAppointmentText.innerText = 'You have no upcoming appointments.';
+    nextAppointmentText.innerText = 'Pas de cours prévu.';
   }
 }
 
@@ -163,9 +223,9 @@ async function checkAvailability(date) {
   }
 }
 
-
 // Render the calendar
 async function renderCalendar() {
+  console.log("Rendering calendar");
   const calendarContainer = document.getElementById('calendar');
   calendarContainer.innerHTML = ''; // Clear calendar
 
@@ -221,9 +281,10 @@ async function renderCalendar() {
 }
 
 // Function to update day info based on appointments and availability
+// Function to update day info based on appointments and availability
 async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments) {
   const today = new Date();
-
+  
   // Check past appointments
   const pastAppointment = appointments.past_appointments.find(
     (app) => app.date.toLowerCase() === apiFormattedDate
@@ -245,10 +306,10 @@ async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments)
     dayDiv.classList.add('booked');
     dayDiv.onclick = async () => {
       openModal(
-        `You already have a booked appointment.`,
+        `Le cours est déjà réservé.`,
         [
           {
-            label: 'Cancel the appointment',
+            label: 'Annuler la réservation',
             className: 'cancel',
             onClick: async () => {
               if (await cancelAppointment(nextAppointment.id)) {
@@ -263,6 +324,24 @@ async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments)
     return;
   }
 
+  // Check if user already has 3 future appointments
+  if (appointments.next_appointments.length >= 3) {
+    dayDiv.classList.remove('placeholder');
+    dayDiv.classList.add('unavailable');
+    dayDiv.onclick = async () => {
+      openModal(`Déjà 3 cours de réservés.`, [
+        {
+          label: 'Fermer',
+          className: 'close-button',
+          onClick: () => {
+            document.getElementById('modal').style.display = 'none';
+          },
+        },
+      ]);
+    };
+    return;
+  }
+
   // Check availability for future dates (only if date is today or in the future)
   if (dateObject >= today) {
     const formattedDateForAvailability = `${String(dateObject.getDate()).padStart(2, '0')}-${String(dateObject.getMonth() + 1).padStart(2, '0')}-${dateObject.getFullYear()}`;
@@ -273,7 +352,7 @@ async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments)
       dayDiv.classList.add('available');
       dayDiv.onclick = async () => {
         openModal(
-          `Do you want to book the slot?`,
+          `Réserver le cours?`,
           [
             {
               label: '08:00',
@@ -293,7 +372,7 @@ async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments)
       dayDiv.onclick = async () => {
         if (availableSlots.length > 0) {
           openModal(
-            `Available slots :`,
+            `Créneaux disponibles :`,
             availableSlots.map((slot) => ({
               label: `${slot}`,
               className: 'book',
@@ -306,9 +385,9 @@ async function updateDayInfo(dayDiv, apiFormattedDate, dateObject, appointments)
             }))
           );
         } else {
-          openModal(`No slots available.`, [
+          openModal(`Pas de créneaux disponibles.`, [
             {
-              label: 'Close',
+              label: 'Fermer',
               className: 'close-button',
               onClick: () => {
                 document.getElementById('modal').style.display = 'none';
