@@ -68,7 +68,7 @@ h1 {
 }
 
 .day.booked {
-  background-color: #ccffcc; /* Green color for booked appointments */
+  background-color: #5FAD56; /* Green color for booked appointments */
 }
 
 .day.past {
@@ -82,11 +82,12 @@ h1 {
 }
 
 .day.available {
-  background-color: #cce0ff; /* Blue color for available slots at 8 AM */
+  background-color: #145C9E; /* Blue color for available slots at 8 AM */
+  color: #dfdfdf; 
 }
 
 .day.unavailable {
-  background-color: #e0cce0; /* Purple color for unavailable slots */
+  background-color: #dcdcdc; /* Purple color for unavailable slots */
 }
 
 .day.placeholder {
